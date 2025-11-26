@@ -1,19 +1,20 @@
 """Main application to read and display SHT30 sensor data once."""
 
-from sht30_sensor import read_once
-from DS18B20_sensor import read_temperature
+import sht30_sensor
+import DS18B20_sensor
+import fl808_sensor
+import time
 
-if __name__ == "__main__":
-    sht30_data = read_once()
-    ds18b20_temps = read_temperature()
-
+def print_ds18b20_readings(temperatures):
+    """Prints the DS18B20 temperature readings."""
     print("\n--- DS18B20 Temperature Readings ---")
-    if ds18b20_temps:
-        for idx, temp in enumerate(ds18b20_temps):
+    if temperatures:
+        for idx, temp in enumerate(temperatures):
             print(f"Sensor {idx + 1}: {temp:.2f} °C")
     else:
         print("No DS18B20 sensors found or failed to read data.")
-    
+def print_sht30_reading(sht30_data):
+    """Prints the SHT30 sensor reading."""
     print("\n--- SHT30 Sensor Reading ---")
     if sht30_data:
         temp_c, hum_pct = sht30_data
@@ -27,6 +28,28 @@ if __name__ == "__main__":
         print("Check `sht30_sensor.py` output for initialization errors.")
         
     print("-------------------------")
+
+if __name__ == "__main__":
+    start_time = time.time()
+    
+    # Read and print DS18B20 temperatures
+    ds18b20_temps = DS18B20_sensor.read_temperature()
+    print_ds18b20_readings(ds18b20_temps)
+
+    # Read and print SHT30 data
+    sht30_data = sht30_sensor.read_once()
+    print_sht30_reading(sht30_data)
+
+    # Read and print FL808 sensor toggle count
+    print("\n--- FL808 Sensor Reading ---")
+
+    try:
+            fl808_sensor.watch_line_rising("/dev/gpiochip0", 5)
+    
+    except OSError as ex:
+        print(ex, "\nCustomise the example configuration to suit your situation")
+    
+    print(f"\nTotal execution time: {time.time() - start_time:.2f} seconds")
 
 
 
