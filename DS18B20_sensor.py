@@ -19,11 +19,13 @@ def read_temperature():
         return []
 
     sensors = []
+    ID = []
     try:
         for sensor in W1ThermSensor.get_available_sensors():
             temperature = sensor.get_temperature()
+            ID.append(sensor.id)
             sensors.append(temperature)
-        return sensors
+        return sensors, ID
     except Exception:
         # map sensor-specific exceptions to an empty result for robustness
         return []

@@ -8,11 +8,13 @@ import gpiod
 from gpiod.line import Edge
 import time
 
-TOTAL_RUNTIME = 999  # seconds
-start_time = time.time()
+TOTAL_RUNTIME = 5  # seconds
+conversion_rate = 4.8
+
 
 
 def watch_line_rising(chip_path, line_offset):
+    start_time = time.time()
     count = 0
     with gpiod.request_lines(
         chip_path,
@@ -22,11 +24,10 @@ def watch_line_rising(chip_path, line_offset):
         while (time.time() < start_time + TOTAL_RUNTIME):
             # Blocks until at least one event is available
             for event in request.read_edge_events():
-                print(
-                    "line: {}  type: Rising   event #{}".format(
-                        event.line_offset, event.line_seqno
-                    )
-                )
+                #print("line: {}  type: Rising   event #{}".format(event.line_offset, event.line_seqno))
                 count += 1
 
-    print(f"\nTotal rising edges detected: {count} in {TOTAL_RUNTIME} seconds")
+    #print(f"\nTotal rising edges detected: {count} in {TOTAL_RUNTIME} seconds")
+    frequency = count / TOTAL_RUNTIME
+    flow_rate = frequency / conversion_rate
+    return flow_rate  # Liters per minute
