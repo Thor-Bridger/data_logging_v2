@@ -8,8 +8,8 @@ import gpiod
 from gpiod.line import Edge
 import time
 
-TOTAL_RUNTIME = 5  # seconds
-conversion_rate = 4.8
+TOTAL_RUNTIME = 2  # seconds
+counts_per_litre = 334
 
 
 
@@ -29,5 +29,5 @@ def watch_line_rising(chip_path, line_offset):
 
     #print(f"\nTotal rising edges detected: {count} in {TOTAL_RUNTIME} seconds")
     frequency = count / TOTAL_RUNTIME
-    flow_rate = frequency / conversion_rate
+    flow_rate = (frequency / counts_per_litre) * 60  # Liters per minute
     return flow_rate  # Liters per minute

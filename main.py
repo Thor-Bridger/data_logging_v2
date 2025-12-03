@@ -26,7 +26,7 @@ def print_sht30_reading(sht30_data):
             print(f"SHT30 Sensor {idx + 1}: Read failed or sensor not detected.")
     
     
-if __name__ == "__main__":
+def main():
     start_time = time.time()
 
     while(True):
@@ -38,9 +38,12 @@ if __name__ == "__main__":
         # Read and print SHT30 data
         sht30_data = i2c_sensors.read_all_sensors(0x44)
         print_sht30_reading(sht30_data)
-        
-        
 
+        #Read and print MS4525 pressure data
+        print("\n--- MS4525 Pressure Readings ---")
+        ms4525_data = i2c_sensors.read_all_sensors(0x00)  # Test address for MS4525
+        print(f"MS4525 Sensor 1 (bus1): {ms4525_data[0][0]} Pa \nTemperature: {ms4525_data[0][1]} °C")
+        
         # Read and print FL808 sensor toggle count
         fl808_data = fl808_sensor.watch_line_rising("/dev/gpiochip0", 5)
         print("\n--- FL808 Sensor Data ---")
@@ -56,6 +59,9 @@ if __name__ == "__main__":
             print(ex, "\nCustomise the example configuration to suit your situation")
         
         print(f"\nTotal execution time: {time.time() - start_time:.2f} seconds")
+
+
+main()    
 
 
 
