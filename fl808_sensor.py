@@ -7,6 +7,7 @@
 import gpiod
 from gpiod.line import Edge
 import time
+import queue
 
 TOTAL_RUNTIME = 2  # seconds
 counts_per_litre = 334
@@ -31,3 +32,12 @@ def watch_line_rising(chip_path, line_offset):
     frequency = count / TOTAL_RUNTIME
     flow_rate = (frequency / counts_per_litre) * 60  # Liters per minute
     return flow_rate  # Liters per minute
+
+def read_fl808_thread(chip_path, line_offset, fl808_queue):
+    while True:
+        try:
+            flow_rate = watch_line_rising(chip_path, line_offset)
+            fl808_queue.put(flow_rate)
+
+        except KeyboardInterrupt:
+            break

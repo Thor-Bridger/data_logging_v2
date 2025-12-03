@@ -1,90 +1,83 @@
-# /home/thor/data_logging_v2/logging.py
-import csv, os, time
-from typing import Callable, Optional, Sequence, Any
+import csv
+import time
+from datetime import datetime
 
-def log_to_csv(
-    duration_seconds: float,
-    data_func: Callable[[], Optional[Any]],
-    filename: str,
-    interval: float = 1.0,
-    fieldnames: Optional[Sequence[str]] = None,
-    timestamp_field: Optional[str] = "timestamp",
-    append: bool = False,
-) -> int:
-    if duration_seconds <= 0:
-        return 0
+class CSVLogger:
+    def __init__(self):
+        """
+        When this class is started, it creates a new CSV file based on the
+        current time and writes the specific headers.
+        """
+        # 1. Generate filename using current time (e.g., "2023-10-27_14-30-00.csv")
+        self.filename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.csv")
+        
+        # 2. Open the file in write mode ('w')
+        # newline='' is required for the csv module to handle line breaks correctly
+        self.file = open(self.filename, mode='w', newline='')
+        self.writer = csv.writer(self.file)
 
-    mode = "a" if append else "w"
-    write_header = not (append and os.path.exists(filename))
-    end = time.monotonic() + duration_seconds
-    rows = 0
-    next_time = time.monotonic()
+        # 3. Create the Header Row
+        # This defines the columns in your Excel/CSV file
+        headers = [
+            "MS4525_Raw_P", 
+            "MS4525_Raw_T", 
+            "SHT30_1_Raw_T", 
+            "SHT30_1_Raw_H", 
+            "SHT30_2_Raw_T", 
+            "SHT30_2_Raw_H",
+            "DS18B20_Temps", # This will hold the list of temps
+            "Timestamp"
+        ]
+        self.writer.writerow(headers)
+        self.file.flush() # Ensure header is saved immediately
+        print(f"Log file created: {self.filename}")
 
-    with open(filename, mode, newline="", encoding="utf-8") as f:
-        writer = None
-        while time.monotonic() < end:
-            try:
-                sample = data_func()
-            except Exception:
-                sample = None
+    def save_data(self, ms_data, sht_data, ds_data):
+        """
+        Takes raw data from sensors and writes one row to the CSV.
+        """
+        # Prepare an empty list for the row
+        row = []
 
-            if sample is not None:
-                if isinstance(sample, dict):
-                    if timestamp_field:
-                        sample = {**sample, timestamp_field: time.time()}
-                    if writer is None:
-                        keys = list(sample.keys()) if fieldnames is None else list(fieldnames)
-                        writer = csv.DictWriter(f, fieldnames=keys)
-                        if write_header:
-                            writer.writeheader()
-                            write_header = False
-                    writer.writerow(sample)
-                    rows += 1
+        # --- MS4525 Data ---
+        # Structure: [[raw_p, raw_t]]
+        # We want the first item in the list, then index 0 (pressure) and 1 (temp)
+        if ms_data:
+            row.append(ms_data[0][0])
+            row.append(ms_data[0][1])
+        else:
+            row.extend(["None", "None"])
 
-                elif isinstance(sample, (list, tuple)):
-                    # Allow list/tuple rows even when `fieldnames` not provided by
-                    # auto-generating numeric column names. If `timestamp_field`
-                    # is set, append the timestamp as an extra column.
-                    row = list(sample)
-                    if fieldnames is None:
-                        # generate col0..colN-1 (and timestamp column if requested)
-                        generated = [f"col{i}" for i in range(len(row))]
-                        if timestamp_field:
-                            generated.append(timestamp_field)
-                        keys = generated
-                    else:
-                        keys = list(fieldnames)
-                        if timestamp_field and timestamp_field not in keys:
-                            # when user-supplied fieldnames don't include timestamp,
-                            # add it so header and rows align
-                            keys = keys + [timestamp_field]
+        # --- SHT30 Data ---
+        # Structure: [[t1, h1], [t2, h2]]
+        if sht_data and len(sht_data) >= 2:
+            # Sensor 1
+            row.append(sht_data[0][0])
+            row.append(sht_data[0][1])
+            # Sensor 2
+            row.append(sht_data[1][0])
+            row.append(sht_data[1][1])
+        else:
+            row.extend(["None", "None", "None", "None"])
 
-                    # initialize writer when needed
-                    if writer is None:
-                        writer = csv.writer(f)
-                        if write_header:
-                            writer.writerow(list(keys))
-                            write_header = False
+        # --- DS18B20 Data ---
+        # Structure: ([temp1, temp2...], [id1, id2...])
+        # We only want the temperatures (index 0 of the tuple)
+        if ds_data and len(ds_data) > 0:
+            temps = ds_data[0] # This is the list of temperatures
+            row.append(temps)  # Writes the whole list into one cell like "[24.5, 25.1]"
+        else:
+            row.append("None")
 
-                    # append timestamp value to the row if requested
-                    if timestamp_field:
-                        row = row + [time.time()]
+        # --- Timestamp ---
+        row.append(time.time())
 
-                    writer.writerow(row)
-                    rows += 1
+        # Write the row to the file
+        self.writer.writerow(row)
+        
+        # Flush ensures data is physically written to the drive immediately
+        # (Useful if power is cut or program crashes)
+        self.file.flush()
 
-            next_time += interval
-            sleep = max(0.0, next_time - time.monotonic())
-            # don't sleep past end
-            if time.monotonic() + sleep > end:
-                time.sleep(max(0.0, end - time.monotonic()))
-            else:
-                time.sleep(sleep)
-
-    return rows
-
-
-if __name__ == "__main__":
-    import random
-    def sample(): return {"t": round(20 + random.random()*5,2)}
-    print("Wrote", log_to_csv(5, sample, "sample_log.csv", interval=1.0, timestamp_field=None))
+    def close(self):
+        self.file.close()
