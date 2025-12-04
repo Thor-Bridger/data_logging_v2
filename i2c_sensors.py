@@ -76,14 +76,14 @@ def read_ms4525(bus, address) -> Optional[float]:
         # 1. Read 4 bytes of data from the specific address
         #print("Searching address:", hex(add))
 
-        data = i2c_msg.read(address, 4) # Wake up
-        time.sleep(0.02)
+        #data = i2c_msg.read(address, 4) # Wake up
+        #time.sleep(0.1)
 
         data = i2c_msg.read(address, 4) # Actual read
         bus.i2c_rdwr(data)
 
         found_data = list(data)
-        #print("Data from address", hex(add), ":", found_data)
+        #print("Data from address", hex(address), ":", found_data)
 
         # 2. Convert the raw data to pressure
         raw_pressure = (found_data[0] << 8) | found_data[1]
